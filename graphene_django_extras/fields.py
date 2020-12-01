@@ -120,7 +120,14 @@ class DjangoFilterListField(Field):
             field = find_field(info.field_asts[0], available_related_fields)
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
 
-        if field is not None:
+        filter_declared_with_method = [
+            k for k, v in filterset_class.declared_filters.items() if v.method
+        ]
+        filter_kwargs_has_declared_with_method = bool(
+            [k for k, v in filter_kwargs.items() if k in filter_declared_with_method]
+        )
+
+        if field is not None and not filter_kwargs_has_declared_with_method:
             try:
                 if filter_kwargs:
                     qs = operator.attrgetter(
