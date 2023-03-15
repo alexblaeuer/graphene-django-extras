@@ -9,7 +9,7 @@ from django.contrib.contenttypes.fields import (
     GenericRel,
 )
 from django.db import models
-from django.utils.encoding import force_text
+from django.utils.encoding import force_str
 from graphene import (
     Field,
     ID,
@@ -24,9 +24,10 @@ from graphene import (
     UUID,
 )
 from graphene.types.json import JSONString
-from graphene.utils.str_converters import to_camel_case, to_const
+from graphene.utils.str_converters import to_camel_case
 from graphene_django.compat import ArrayField, HStoreField, RangeField, JSONField
-from graphene_django.utils import import_single_dispatch
+from functools import singledispatch
+from graphene_django.utils.str_converters import to_const
 
 from .base_types import (
     GenericForeignKeyType,
@@ -39,22 +40,19 @@ from .base_types import (
 from .fields import DjangoFilterListField, DjangoListField
 from .utils import is_required, get_model_fields, get_related_model
 
-singledispatch = import_single_dispatch()
-
-
 NAME_PATTERN = r"^[_a-zA-Z][_a-zA-Z0-9]*$"
 COMPILED_NAME_PATTERN = re.compile(NAME_PATTERN)
 
 
 def assert_valid_name(name):
-    """ Helper to assert that provided names are valid. """
+    """Helper to assert that provided names are valid."""
     assert COMPILED_NAME_PATTERN.match(
         name
     ), 'Names must match /{}/ but "{}" does not.'.format(NAME_PATTERN, name)
 
 
 def convert_choice_name(name):
-    name = to_const(force_text(name))
+    name = to_const(force_str(name))
     try:
         assert_valid_name(name)
     except AssertionError:
@@ -147,7 +145,7 @@ def construct_fields(
             if input_flag == "create" and name == "id":
                 continue
             is_included = include_fields and name in include_fields
-            nested_field = True if name in nested_fields else False
+            nested_field = name in nested_fields
             is_not_in_only = only_fields and name not in only_fields
             # is_already_created = name in options.fields
             is_excluded = (

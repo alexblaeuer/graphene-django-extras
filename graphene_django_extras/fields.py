@@ -43,7 +43,7 @@ class DjangoObjectField(Field):
         except manager.model.DoesNotExist:
             return None
 
-    def get_resolver(self, parent_resolver):
+    def wrap_resolve(self, parent_resolver):
         return partial(self.object_resolver, self.type._meta.model._default_manager)
 
 
@@ -117,7 +117,7 @@ class DjangoFilterListField(Field):
 
         if root and is_valid_django_model(root._meta.model):
             available_related_fields = get_related_fields(root._meta.model)
-            field = find_field(info.field_asts[0], available_related_fields)
+            field = find_field(info.field_nodes[0], available_related_fields)
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
 
         filter_declared_with_method = [
@@ -145,7 +145,7 @@ class DjangoFilterListField(Field):
                 qs = None
 
         if qs is None:
-            qs = queryset_factory(manager, info.field_asts, info.fragments, **kwargs)
+            qs = queryset_factory(manager, root, info, **kwargs)
             qs = filterset_class(
                 data=filter_kwargs, queryset=qs, request=info.context
             ).qs
@@ -156,7 +156,7 @@ class DjangoFilterListField(Field):
 
         return maybe_queryset(qs)
 
-    def get_resolver(self, parent_resolver):
+    def wrap_resolve(self, parent_resolver):
         current_type = self.type
         while isinstance(current_type, Structure):
             current_type = current_type.of_type
@@ -228,21 +228,21 @@ class DjangoFilterPaginateListField(Field):
             kwargs["description"] = "{} list".format(_type._meta.model.__name__)
 
         super(DjangoFilterPaginateListField, self).__init__(
-            List(_type), *args, **kwargs
+            List(NonNull(_type)), *args, **kwargs
         )
 
     @property
     def model(self):
         return self.type.of_type._meta.node._meta.model
 
-    def get_queryset(self, manager, info, **kwargs):
-        return queryset_factory(manager, info.field_asts, info.fragments, **kwargs)
+    def get_queryset(self, manager, root, info, **kwargs):
+        return queryset_factory(manager, root, info, **kwargs)
 
     def list_resolver(
         self, manager, filterset_class, filtering_args, root, info, **kwargs
     ):
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
-        qs = self.get_queryset(manager, info, **kwargs)
+        qs = self.get_queryset(manager, root, info, **kwargs)
         qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
 
         if root and is_valid_django_model(root._meta.model):
@@ -254,7 +254,7 @@ class DjangoFilterPaginateListField(Field):
 
         return maybe_queryset(qs)
 
-    def get_resolver(self, parent_resolver):
+    def wrap_resolve(self, parent_resolver):
         current_type = self.type
         while isinstance(current_type, Structure):
             current_type = current_type.of_type
@@ -315,7 +315,7 @@ class DjangoListObjectField(Field):
         self, manager, filterset_class, filtering_args, root, info, **kwargs
     ):
 
-        qs = queryset_factory(manager, info.field_asts, info.fragments, **kwargs)
+        qs = queryset_factory(manager, root, info, **kwargs)
 
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
 
@@ -328,7 +328,7 @@ class DjangoListObjectField(Field):
             results_field_name=self.type._meta.results_field_name,
         )
 
-    def get_resolver(self, parent_resolver):
+    def wrap_resolve(self, parent_resolver):
         return partial(
             self.list_resolver,
             self.type._meta.model._default_manager,
