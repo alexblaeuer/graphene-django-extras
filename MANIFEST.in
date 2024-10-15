@@ -1,7 +1,0 @@
-include README.md
-include README.rst
-include LICENSE
-recursive-include graphene_django_extras
-recursive-include directives
-recursive-include filters
-recursive-include paginations
