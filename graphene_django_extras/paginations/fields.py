@@ -15,7 +15,7 @@ class AbstractPaginationField(Field):
     def model(self):
         return self.type.of_type._meta.node._meta.model
 
-    def get_resolver(self, parent_resolver):
+    def wrap_resolve(self, parent_resolver):
         return partial(
             self.list_resolver, self.type.of_type._meta.model._default_manager
         )
@@ -125,8 +125,10 @@ class PagePaginationField(AbstractPaginationField):
 
         self.ordering_param = ordering_param
 
-        self.page_size_query_description = "Number of results to return per page. Actual 'page_size': {}".format(
-            self.page_size
+        self.page_size_query_description = (
+            "Number of results to return per page. Actual 'page_size': {}".format(
+                self.page_size
+            )
         )
 
         kwargs[self.page_query_param] = Int(

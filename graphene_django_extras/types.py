@@ -256,6 +256,9 @@ class DjangoListObjectType(ObjectType):
             'You need to pass a valid Django Model in {}.Meta, received "{}".'
         ).format(cls.__name__, model)
 
+        if not registry:
+            registry = get_global_registry()
+
         if not DJANGO_FILTER_INSTALLED and filter_fields:
             raise Exception("Can only set filter_fields if Django-Filter is installed")
 
@@ -300,6 +303,7 @@ class DjangoListObjectType(ObjectType):
 
         _meta = DjangoObjectOptions(cls)
         _meta.model = model
+        _meta.registry = registry
         _meta.queryset = queryset
         _meta.baseType = baseType
         _meta.results_field_name = results_field_name
@@ -336,7 +340,7 @@ class DjangoListObjectType(ObjectType):
 
 class DjangoSerializerType(ObjectType):
     """
-        DjangoSerializerType definition
+    DjangoSerializerType definition
     """
 
     ok = Boolean(description="Boolean field that return mutation result request.")
@@ -453,6 +457,7 @@ class DjangoSerializerType(ObjectType):
         _meta.output_type = output_type
         _meta.output_list_type = output_list_type
         _meta.model = model
+        _meta.registry = registry
         _meta.queryset = queryset or model._default_manager
         _meta.serializer_class = serializer_class
         _meta.input_field_name = input_field_name
@@ -611,9 +616,7 @@ class DjangoSerializerType(ObjectType):
     @classmethod
     def list(cls, manager, filterset_class, filtering_args, root, info, **kwargs):
 
-        qs = queryset_factory(
-            cls._meta.queryset or manager, info.field_asts, info.fragments, **kwargs
-        )
+        qs = queryset_factory(cls._meta.queryset or manager, root, info, **kwargs)
 
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
 
